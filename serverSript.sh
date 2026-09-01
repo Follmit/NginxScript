@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Чувствительный режим
 set -euo pipefail
 
