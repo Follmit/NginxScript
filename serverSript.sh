@@ -1,16 +1,20 @@
+# Чувствительный режим
 set -euo pipefail
 
+# Чек рут доступа
 if [[ $EUID -ne 0 ]]; then
    echo "Ошибка: Нет root доступа"
    exit 1
 fi
 
+# Обновление и установка пакетов
 echo "Обновление и установка пакетов"
 apt-get update && apt-get upgrade -y
 apt-get install -y curl wget git ufw fail2ban software-properties-common ca-certificates gnupg nginx
 apt-get install -y unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
+# Установка Docker
 echo "Установка Docker"
 if ! command -v docker &> /dev/null; then
     install -m 0755 -d /etc/apt/keyrings
@@ -28,9 +32,10 @@ if ! command -v docker &> /dev/null; then
 else
     echo "Docker уже установлен"
 fi
-
+# Конфигурирование NetworkSecurity
 echo "Конфигурирование NetworkSecurity"
 
+# Настройка ufw
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 22/tcp comment 'SSH'
@@ -38,6 +43,7 @@ ufw allow 80/tcp comment 'HTTP'
 ufw allow 443/tcp comment 'HTTPS'
 echo "y" | ufw enable
 
+# Настройка fail2ban
 cat << 'EOF' > /etc/fail2ban/jail.local
 [sshd]
 enabled = true
@@ -56,23 +62,28 @@ echo "Конфигурирование Nginx"
 
 cat << 'EOF' > /etc/nginx/conf.d/security.conf
 server_tokens off;
+
 client_max_body_size 16M;
 client_body_buffer_size 128k;
 
+# timeout
 client_body_timeout 10s;
 client_header_timeout 10s;
 keepalive_timeout 15s;
 send_timeout 10s;
 
+# Заголовки
 add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-XSS-Protection "1; mode=block" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
+# Лимиты
 limit_req_zone $binary_remote_addr zone=fastapi_limit:10m rate=15r/s;
 limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
 EOF
 
+# Конфигурация Proxy Nginx
 TARGET_CONF="/etc/nginx/sites-available/fastapi.conf"
 
 if [ -f "$TARGET_CONF" ]; then
@@ -117,6 +128,7 @@ mkdir -p /etc/nginx/sites-enabled
 ln -sf "$TARGET_CONF" /etc/nginx/sites-enabled/fastapi.conf
 rm -f /etc/nginx/sites-enabled/default
 
+# Проверка nginx
 echo "Проверка и перезапуск Nginx"
 if nginx -t; then
     systemctl reload nginx
