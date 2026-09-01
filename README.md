@@ -1,4 +1,4 @@
-# NginxScript
+# serverScript.sh
 
 1. Чувствительный режим
 Прерывание команды в случае ошибки.
@@ -32,3 +32,9 @@ client_max_body_size 16M - размер загружаемых файлов.
 
 8. Проверка nginx
 Проверка синтаксиса. Если есть ошибка - скрипт не будет выполнен.
+
+
+Запуск
+
+chmod +x serverScript.sh
+sudo ./serverScript.sh
